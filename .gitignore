@@ -14,3 +14,9 @@
 .cxx
 local.properties
 .kotlin
+
+# Configuración de Firebase: cada persona usa la suya (contiene las claves del proyecto)
+app/google-services.json
+
+# Dependencias del backend de ejemplo
+docs/backend-cloud-run/node_modules/

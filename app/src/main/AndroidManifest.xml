@@ -2,7 +2,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Firebase Auth y Firestore necesitan red (las librerías también lo declaran;
+         se deja explícito para que se vea en el manifest). -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
+        android:name=".GastosApp"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"

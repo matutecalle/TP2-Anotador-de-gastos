@@ -1,0 +1,56 @@
+# Configuración declarativa del servicio de Cloud Run (formato Knative).
+# Configuración OBJETIVO: no está desplegada (requiere cuenta de facturación).
+# Reemplazar PROJECT_ID por el id del proyecto de Firebase/Google Cloud.
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: gastos-api
+  labels:
+    # Región San Pablo: la más cercana a Argentina -> menor latencia.
+    cloud.googleapis.com/location: southamerica-east1
+  annotations:
+    # Acepta tráfico de internet; la seguridad la da el ID token de Firebase.
+    run.googleapis.com/ingress: all
+spec:
+  template:
+    metadata:
+      annotations:
+        # ---- Autoescalado ----
+        # 0 instancias sin tráfico: costo cero cuando nadie usa la app (escala a cero).
+        autoscaling.knative.dev/minScale: "0"
+        # Tope de 10 instancias: limita el costo máximo ante un pico o un abuso.
+        autoscaling.knative.dev/maxScale: "10"
+        # CPU solo mientras se atiende una petición (modelo de pago por request).
+        run.googleapis.com/cpu-throttling: "true"
+        # Más CPU durante el arranque para reducir el "cold start".
+        run.googleapis.com/startup-cpu-boost: "true"
+    spec:
+      # Hasta 80 peticiones simultáneas por instancia. Si se supera, Cloud Run
+      # crea otra instancia y su balanceador reparte el tráfico entre ellas.
+      containerConcurrency: 80
+      # Una petición que tarda más de 30 s se corta (evita instancias colgadas).
+      timeoutSeconds: 30
+      # Cuenta de servicio con permiso mínimo: rol "Cloud Datastore User".
+      serviceAccountName: gastos-api@PROJECT_ID.iam.gserviceaccount.com
+      containers:
+        - image: southamerica-east1-docker.pkg.dev/PROJECT_ID/gastos/gastos-api:1.0.0
+          ports:
+            - containerPort: 8080
+          env:
+            - name: COLECCION_GASTOS
+              value: gastos
+          resources:
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          # Cloud Run no envía tráfico a la instancia hasta que /health responde.
+          startupProbe:
+            httpGet:
+              path: /health
+            periodSeconds: 5
+            failureThreshold: 6
+          # Si deja de responder, Cloud Run reinicia la instancia (redundancia).
+          livenessProbe:
+            httpGet:
+              path: /health
+            periodSeconds: 30

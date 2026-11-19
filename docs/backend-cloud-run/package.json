@@ -1,0 +1,17 @@
+{
+  "name": "gastos-api",
+  "version": "1.0.0",
+  "description": "API de sincronización del Anotador de gastos (configuración objetivo para Cloud Run, no desplegada)",
+  "main": "server.js",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "firebase-admin": "^13.0.0"
+  }
+}

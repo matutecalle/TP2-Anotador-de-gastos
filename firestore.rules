@@ -1,0 +1,42 @@
+rules_version = '2';
+
+// Reglas de seguridad de Cloud Firestore — Anotador de gastos (TP3).
+// Se copian a mano en: Consola de Firebase > Firestore Database > Reglas > Publicar.
+//
+// Principio: todo está denegado salvo lo que se permite explícitamente abajo.
+// Cada usuario solo puede leer y escribir SUS gastos: users/{uid}/gastos/{gastoId}.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ¿La petición viene del dueño de los datos?
+    function esDueno(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    // Validación de tipos y valores del documento que se intenta escribir.
+    // Repite las validaciones de la app: si alguien salta la app y escribe
+    // directo contra la API, igual no puede guardar datos inválidos.
+    function gastoValido(gasto) {
+      return gasto.keys().hasAll(['descripcion', 'monto', 'categoria', 'fecha'])
+          && gasto.keys().hasOnly(['descripcion', 'monto', 'categoria', 'fecha'])
+          && gasto.descripcion is string
+          && gasto.descripcion.size() > 0
+          && gasto.descripcion.size() <= 200
+          && gasto.monto is number
+          && gasto.monto > 0
+          && gasto.categoria is string
+          && gasto.categoria.size() > 0
+          && gasto.categoria.size() <= 50
+          && gasto.fecha is int;
+    }
+
+    match /users/{uid}/gastos/{gastoId} {
+      allow read, delete: if esDueno(uid);
+      allow create, update: if esDueno(uid) && gastoValido(request.resource.data);
+    }
+
+    // Cualquier otra ruta (incluido el documento users/{uid} y otras colecciones)
+    // no tiene ningún "allow", por lo tanto queda denegada.
+  }
+}
